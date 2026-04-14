@@ -1,0 +1,11 @@
+node_modules
+dist
+.env
+
+
+./packages/cli/dist/
+./packages/cli/node_modules/
+./packages/core/dist/
+./packages/core/node_modules/
+
+./packages/skills/node_modules/
