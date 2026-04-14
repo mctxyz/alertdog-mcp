@@ -1,0 +1,39 @@
+{
+  "name": "alertdog-mcp",
+  "version": "0.1.0",
+  "private": true,
+  "description": "MCP server and packaged skill scripts for AlertDog tools.",
+  "type": "module",
+  "workspaces": [
+    "packages/*"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "build": "yarn workspace @alertdog/core build && yarn workspace @alertdog/cli build && yarn workspace @alertdog/mcp build && node dev-scripts/link-workspace-packages.mjs && yarn workspace @alertdog/skills build",
+    "build:core": "yarn workspace @alertdog/core build",
+    "build:cli": "yarn workspace @alertdog/cli build",
+    "build:mcp": "yarn workspace @alertdog/mcp build",
+    "build:skills": "yarn workspace @alertdog/skills build",
+    "link:workspace": "node dev-scripts/link-workspace-packages.mjs",
+    "dev": "tsx packages/mcp/src/stdio.ts",
+    "dev:client": "tsx packages/mcp/src/stdio.ts",
+    "start:client": "node packages/mcp/dist/stdio.js",
+    "call:tool": "node packages/cli/dist/index.js",
+    "stdio": "tsx packages/mcp/src/stdio.ts",
+    "list-tools": "tsx packages/examples/src/list-tools.ts",
+    "generate:skill-docs": "node dev-scripts/generate-skill-docs.mjs",
+    "verify:client": "node dev-scripts/verify-mcp.mjs"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.27.1",
+    "dotenv": "^16.6.1",
+    "zod": "^4.3.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.17.30",
+    "tsx": "^4.19.3",
+    "typescript": "^5.8.3"
+  }
+}

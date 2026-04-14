@@ -1,0 +1,15 @@
+{
+  "extends": "../../tsconfig.base.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src",
+    "baseUrl": ".",
+    "paths": {
+      "@alertdog/core": ["../core/dist/index.d.ts"],
+      "@alertdog/core/*": ["../core/dist/*"],
+      "@alertdog/cli": ["../cli/dist/index.d.ts"],
+      "@alertdog/cli/*": ["../cli/dist/*"]
+    }
+  },
+  "include": ["src/**/*.ts"]
+}

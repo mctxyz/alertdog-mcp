@@ -1,0 +1,11 @@
+{
+  "name": "@alertdog/skills",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "files": ["SKILL.md", "references"],
+  "scripts": {
+    "build": "cd ../.. && node dev-scripts/generate-skill-docs.mjs",
+    "clean": "true"
+  }
+}
