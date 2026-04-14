@@ -1,6 +1,6 @@
 {
   "name": "@alertdog/cli",
-  "version": "0.1.0",
+  "version": "1.0.1",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -15,12 +15,15 @@
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsup",
     "clean": "rm -rf dist",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@alertdog/core": "file:../core",
     "dotenv": "^16.6.1"
+  },
+  "devDependencies": {
+    "@alertdog/core": "file:../core",
+    "tsup": "^8.3.5"
   }
 }

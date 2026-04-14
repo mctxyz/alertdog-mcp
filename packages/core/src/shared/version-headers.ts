@@ -34,7 +34,7 @@ export function getAgentClientVersionInfo(): AlertDogClientVersionInfo {
   };
 }
 
-// getSkillClientVersionInfo 返回 skills one-shot 脚本要上报的版本信息。
+// getSkillClientVersionInfo 返回 skills cli 脚本要上报的版本信息。
 export function getSkillClientVersionInfo(): AlertDogClientVersionInfo {
   return {
     clientType: "skill",

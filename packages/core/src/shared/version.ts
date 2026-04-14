@@ -1,8 +1,8 @@
-export const SERVER_VERSION = "1.0.0";
-export const CLI_VERSION = "1.0.0";
-export const CONTRACT_VERSION = "1.0.0";
-export const SKILL_VERSION = "1.0.0";
-export const STDIO_VERSION = "1.0.0";
+export const SERVER_VERSION = "1.0.1";
+export const CLI_VERSION = "1.0.1";
+export const CONTRACT_VERSION = "1.0.1";
+export const SKILL_VERSION = "1.0.1";
+export const STDIO_VERSION = "1.0.1";
 
 // formatRuntimeVersionLine 按统一格式拼接运行时版本日志。
 export function formatRuntimeVersionLine(

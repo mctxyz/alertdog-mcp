@@ -24,7 +24,8 @@
     "stdio": "tsx packages/mcp/src/stdio.ts",
     "list-tools": "tsx packages/examples/src/list-tools.ts",
     "generate:skill-docs": "node dev-scripts/generate-skill-docs.mjs",
-    "verify:client": "node dev-scripts/verify-mcp.mjs"
+    "verify:client": "node dev-scripts/verify-mcp.mjs",
+    "publish:all": "npm publish ./packages/core --access public --registry https://registry.npmjs.org/ && npm publish ./packages/cli --access public --registry https://registry.npmjs.org/ && npm publish ./packages/mcp --access public --registry https://registry.npmjs.org/ && npm publish ./packages/skills --access public --registry https://registry.npmjs.org/"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.1",

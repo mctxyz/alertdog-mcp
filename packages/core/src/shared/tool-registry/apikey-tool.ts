@@ -39,7 +39,7 @@ export const APIKEY_TOOL_REGISTRATIONS: AlertDogToolRegistration<AlertDogClient>
       ok: true,
       steps: [
         "先在 AlertDog 官方产品侧创建用户自己的 apikey。",
-        "调用本地 stdio 或 one-shot 工具时，把该 apikey 作为 apiKey 参数传入。",
+        "调用本地 stdio 或 cli 工具时，把该 apikey 作为 apiKey 参数传入。",
         "本地工具运行时会将 apiKey 转发为 AlertDog 的 X-Api-Key 请求头。",
       ],
     }),
