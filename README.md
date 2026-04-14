@@ -1,6 +1,5 @@
 # AlertDog MCP Packages
 
-这个子项目把 AlertDog 的本地调用能力拆成 4 个包：
 
 - `packages/core`
   - AlertDog REST API client
@@ -25,7 +24,7 @@
 
 请求链路只有两种：
 
-### 1. CLI one-shot
+### 1. CLI 
 
 ```text
 shell
@@ -87,7 +86,7 @@ packages/
 根构建命令：
 
 ```bash
-cd /absolute/path/to/mcp
+
 yarn build
 ```
 
@@ -119,7 +118,6 @@ yarn generate:skill-docs
 ### 运行 CLI
 
 ```bash
-cd /absolute/path/to/mcp
 node packages/cli/dist/index.js list-tools
 ```
 
