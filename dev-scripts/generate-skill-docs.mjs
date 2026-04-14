@@ -7,7 +7,7 @@ const registryModulePath = resolve(
   rootDir,
   "packages/core/dist/shared/tool-registry.js",
 );
-const skillsRootDir = resolve(rootDir, "packages/skills");
+const skillsRootDir = resolve(rootDir, "skills");
 const rootSkillPath = resolve(skillsRootDir, "SKILL.md");
 const referencesDir = resolve(skillsRootDir, "references");
 const legacyCategoriesDir = resolve(skillsRootDir, "categories");

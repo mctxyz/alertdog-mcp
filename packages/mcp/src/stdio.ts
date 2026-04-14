@@ -1,7 +1,5 @@
 import "dotenv/config";
 
-import { fileURLToPath } from "node:url";
-
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { z } from "zod/v4";
@@ -130,22 +128,4 @@ export async function main(): Promise<void> {
   const transport = new StdioServerTransport();
 
   await server.connect(transport);
-}
-
-// isDirectExecution 判断当前模块是否作为命令行入口直接执行。
-function isDirectExecution(): boolean {
-  const entryPath = process.argv[1];
-  if (!entryPath) {
-    return false;
-  }
-
-  return fileURLToPath(import.meta.url) === entryPath;
-}
-
-if (isDirectExecution()) {
-  void main().catch((error: unknown) => {
-    const message = error instanceof Error ? error.stack ?? error.message : String(error);
-    process.stderr.write(`${message}\n`);
-    process.exit(1);
-  });
 }

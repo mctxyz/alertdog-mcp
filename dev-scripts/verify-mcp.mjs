@@ -6,14 +6,15 @@ const rootDir = process.cwd();
 const expectedPackagedFiles = [
   "packages/core/dist/index.js",
   "packages/core/dist/shared/tool-registry.js",
+  "packages/cli/dist/bin.js",
   "packages/cli/dist/index.js",
-  "packages/cli/dist/local-config.js",
+  "packages/mcp/dist/bin-stdio.js",
   "packages/mcp/dist/index.js",
   "packages/mcp/dist/stdio.js",
-  "packages/skills/SKILL.md",
-  "packages/skills/references/apikey-skill.md",
-  "packages/skills/references/cex-monitor-skill.md",
-  "packages/skills/references/notify-channel-skill.md",
+  "skills/SKILL.md",
+  "skills/references/apikey-skill.md",
+  "skills/references/cex-monitor-skill.md",
+  "skills/references/notify-channel-skill.md",
 ];
 
 // checkPackagedClient 验证客户端分发目录是否包含关键产物。

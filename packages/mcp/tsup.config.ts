@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 
 // defineConfig 为 MCP 生成可直接发布到 npm 的自包含产物。
 export default defineConfig({
-  entry: ["src/index.ts", "src/stdio.ts"],
+  entry: ["src/index.ts", "src/stdio.ts", "src/bin-stdio.ts"],
   format: ["esm"],
   platform: "node",
   target: "node18",

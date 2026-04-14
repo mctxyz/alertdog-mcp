@@ -14,7 +14,7 @@
   - stdio MCP server
   - 对外暴露 MCP tools
   - 内部直接调用 `@alertdog/core`
-- `packages/skills`
+- `skills`
   - 根 skill 与分类 references
 
 
@@ -73,8 +73,8 @@ packages/
 - stdio MCP
   - `packages/mcp/dist/stdio.js`
 - skills 文档
-  - `packages/skills/SKILL.md`
-  - `packages/skills/references/*.md`
+  - `skills/SKILL.md`
+  - `skills/references/*.md`
 
 ## Build
 
@@ -321,12 +321,12 @@ node packages/cli/dist/index.js run cex_price_subscription_create \
 
 ## Skills
 
-`packages/skills` 直接保存源码级 skill 文档：
+`skills` 直接保存源码级 skill 文档：
 
-- `packages/skills/SKILL.md`
-- `packages/skills/references/apikey-skill.md`
-- `packages/skills/references/cex-monitor-skill.md`
-- `packages/skills/references/notify-channel-skill.md`
+- `skills/SKILL.md`
+- `skills/references/apikey-skill.md`
+- `skills/references/cex-monitor-skill.md`
+- `skills/references/notify-channel-skill.md`
 
 这些文档由下面的脚本生成：
 

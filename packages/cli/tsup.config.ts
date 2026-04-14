@@ -3,7 +3,7 @@ import { resolve } from "node:path";
 
 // defineConfig 为 CLI 生成可直接发布到 npm 的自包含产物。
 export default defineConfig({
-  entry: ["src/index.ts"],
+  entry: ["src/index.ts", "src/bin.ts"],
   format: ["esm"],
   platform: "node",
   target: "node18",

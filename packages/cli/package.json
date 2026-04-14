@@ -1,11 +1,11 @@
 {
   "name": "@alertdog/cli",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "alertdog": "dist/index.js"
+    "alertdog": "dist/bin.js"
   },
   "files": ["dist"],
   "exports": {

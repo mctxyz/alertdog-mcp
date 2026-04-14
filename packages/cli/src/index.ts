@@ -3,7 +3,6 @@
 import "dotenv/config";
 
 import { homedir } from "node:os";
-import { fileURLToPath } from "node:url";
 
 import {
   clearSavedApiKey,
@@ -589,22 +588,4 @@ export async function main(): Promise<void> {
   const commandContext = buildRunToolCommandContext(parsedArgs);
   const result = await runToolCommand(commandContext);
   renderToolResult(commandContext.toolName, result, parsedArgs.json);
-}
-
-// isDirectExecution 判断当前 index 模块是否作为 CLI 入口直接执行。
-function isDirectExecution(): boolean {
-  const entryPath = process.argv[1];
-  if (!entryPath) {
-    return false;
-  }
-
-  return fileURLToPath(import.meta.url) === entryPath;
-}
-
-if (isDirectExecution()) {
-  void main().catch((error: unknown) => {
-    const message = error instanceof Error ? error.stack ?? error.message : String(error);
-    process.stderr.write(`${message}\n`);
-    process.exit(1);
-  });
 }
