@@ -4,17 +4,6 @@ import {
   getAgentClientVersionInfo,
 } from "../shared/version-headers.js";
 
-const VERSION_WARNING_HEADER_NAMES = [
-  "x-alertdog-version-warning",
-  "x-alertdog-upgrade-message",
-  "x-alertdog-update-message",
-];
-const VERSION_LATEST_HEADER_NAMES = [
-  "x-alertdog-latest-version",
-  "x-alertdog-latest-cli-version",
-];
-const PRINTED_VERSION_HINTS = new Set<string>();
-
 export interface AlertDogUserAPIKeyRecord {
   id: number;
   user_id: number;
@@ -623,15 +612,10 @@ export class AlertDogClient {
       );
 
       const rawResponseText = await response.text();
-      this.printVersionReminder(response.headers);
       this.logHttpResponse("GET", requestUrl, response.status, rawResponseText);
 
       if (!response.ok) {
-        throw new AlertDogClientError(
-          "http",
-          `AlertDog HTTP 请求失败，状态码 ${response.status}，URL: ${requestUrl}`,
-          { status: response.status },
-        );
+        throw this.buildHttpResponseError(response.status, requestUrl, rawResponseText);
       }
 
       payload = this.parseJsonResponse<
@@ -815,15 +799,10 @@ export class AlertDogClient {
       });
 
       const rawResponseText = await response.text();
-      this.printVersionReminder(response.headers);
       this.logHttpResponse(method, url, response.status, rawResponseText);
 
       if (!response.ok) {
-        throw new AlertDogClientError(
-          "http",
-          `AlertDog HTTP 请求失败，状态码 ${response.status}，URL: ${url}`,
-          { status: response.status },
-        );
+        throw this.buildHttpResponseError(response.status, url, rawResponseText);
       }
 
       const payload = this.parseJsonResponse<
@@ -867,15 +846,10 @@ export class AlertDogClient {
       });
 
       const rawResponseText = await response.text();
-      this.printVersionReminder(response.headers);
       this.logHttpResponse(method, url, response.status, rawResponseText);
 
       if (!response.ok) {
-        throw new AlertDogClientError(
-          "http",
-          `AlertDog HTTP 请求失败，状态码 ${response.status}，URL: ${url}`,
-          { status: response.status },
-        );
+        throw this.buildHttpResponseError(response.status, url, rawResponseText);
       }
 
       return this.parseJsonResponse<T>(rawResponseText, url);
@@ -978,48 +952,48 @@ export class AlertDogClient {
     process.stderr.write(`[AlertDog HTTP] response: ${rawResponseText}\n`);
   }
 
-  // printVersionReminder 根据接口响应头里的版本提示打印一次升级提醒。
-  private printVersionReminder(headers: Headers): void {
-    const warningMessage = this.readVersionWarningMessage(headers);
-    if (!warningMessage) {
-      return;
-    }
-
-    if (PRINTED_VERSION_HINTS.has(warningMessage)) {
-      return;
-    }
-
-    PRINTED_VERSION_HINTS.add(warningMessage);
-    process.stderr.write(`[AlertDog] update reminder: ${warningMessage}\n`);
-  }
-
-  // readVersionWarningMessage 从约定的响应头中提取升级提醒文案。
-  private readVersionWarningMessage(headers: Headers): string | null {
-    for (const headerName of VERSION_WARNING_HEADER_NAMES) {
-      const headerValue = headers.get(headerName)?.trim();
-      if (headerValue) {
-        return headerValue;
-      }
-    }
-
-    const latestVersion = this.readLatestVersionHeader(headers);
-    if (!latestVersion) {
+  // tryParseFailureResponse 尝试把失败响应体解析成统一错误结构，优先读取 response body 的 message/result。
+  private tryParseFailureResponse(rawResponseText: string): AlertDogFailureResponse | null {
+    if (!rawResponseText.trim()) {
       return null;
     }
 
-    return `A newer AlertDog client version is available: ${latestVersion}`;
+    try {
+      const parsed = JSON.parse(rawResponseText) as unknown;
+      if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
+        return null;
+      }
+
+      return parsed as AlertDogFailureResponse;
+    } catch {
+      return null;
+    }
   }
 
-  // readLatestVersionHeader 从响应头里提取服务端建议升级到的最新版本号。
-  private readLatestVersionHeader(headers: Headers): string | null {
-    for (const headerName of VERSION_LATEST_HEADER_NAMES) {
-      const headerValue = headers.get(headerName)?.trim();
-      if (headerValue) {
-        return headerValue;
-      }
+  // buildHttpResponseError 基于 HTTP 失败响应体构造错误，优先透传服务端返回的业务文案。
+  private buildHttpResponseError(
+    status: number,
+    url: string,
+    rawResponseText: string,
+  ): AlertDogClientError {
+    const failurePayload = this.tryParseFailureResponse(rawResponseText);
+    const responseMessage = failurePayload?.message ?? failurePayload?.result;
+    const message =
+      responseMessage && String(responseMessage).trim() !== ""
+        ? String(responseMessage).trim()
+        : `AlertDog HTTP 请求失败，状态码 ${status}，URL: ${url}`;
+
+    if (typeof failurePayload?.code === "number") {
+      return new AlertDogClientError("api", message, {
+        status,
+        apiCode: failurePayload.code,
+      });
     }
 
-    return null;
+    return new AlertDogClientError("http", message, {
+      status,
+      apiCode: failurePayload?.code,
+    });
   }
 
   // parseJsonResponse 解析 JSON 响应，失败时抛出带原始返回信息的业务错误。

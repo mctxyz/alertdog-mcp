@@ -51,6 +51,11 @@ function renderSingleLineListResult(
     outputLine(`page: ${formatInlineRecord(result.page)}`);
   }
 
+  if (isRecord(result.error)) {
+    outputLine("");
+    outputLine(`error: ${formatInlineRecord(result.error)}`);
+  }
+
   const items = Array.isArray(result[listKey])
     ? result[listKey].filter(isRecord)
     : [];
