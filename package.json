@@ -5,18 +5,17 @@
   "description": "MCP server and packaged skill scripts for AlertDog tools.",
   "type": "module",
   "workspaces": [
-    "packages/*",
-    "skills"
+    "packages/*"
   ],
   "engines": {
     "node": ">=18"
   },
   "scripts": {
-    "build": "yarn workspace @alertdog/core build && yarn workspace @alertdog/cli build && yarn workspace @alertdog/mcp build && node dev-scripts/link-workspace-packages.mjs && yarn workspace @alertdog/skills build",
+    "build": "yarn workspace @alertdog/core build && yarn workspace @alertdog/cli build && yarn workspace @alertdog/mcp build && node dev-scripts/link-workspace-packages.mjs && node dev-scripts/generate-skill-docs.mjs",
     "build:core": "yarn workspace @alertdog/core build",
     "build:cli": "yarn workspace @alertdog/cli build",
     "build:mcp": "yarn workspace @alertdog/mcp build",
-    "build:skills": "yarn workspace @alertdog/skills build",
+    "build:skills": "node dev-scripts/generate-skill-docs.mjs",
     "link:workspace": "node dev-scripts/link-workspace-packages.mjs",
     "dev": "tsx packages/mcp/src/stdio.ts",
     "dev:client": "tsx packages/mcp/src/stdio.ts",
@@ -26,7 +25,7 @@
     "list-tools": "tsx packages/examples/src/list-tools.ts",
     "generate:skill-docs": "node dev-scripts/generate-skill-docs.mjs",
     "verify:client": "node dev-scripts/verify-mcp.mjs",
-    "publish:all": "npm publish ./packages/core --access public --registry https://registry.npmjs.org/ && npm publish ./packages/cli --access public --registry https://registry.npmjs.org/ && npm publish ./packages/mcp --access public --registry https://registry.npmjs.org/ && npm publish ./skills --access public --registry https://registry.npmjs.org/"
+    "publish:all": "npm publish ./packages/core --access public --registry https://registry.npmjs.org/ && npm publish ./packages/cli --access public --registry https://registry.npmjs.org/ && npm publish ./packages/mcp --access public --registry https://registry.npmjs.org/"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.27.1",
