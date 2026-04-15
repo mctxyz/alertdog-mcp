@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: alertdog
   version: "1.0.0"
-  homepage: "https://github.com/mctxyz/alertdog-mcp"
+  homepage: "https://alertdog.io"
   agent:
     requires:
       bins: ["alertdog"]
