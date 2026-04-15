@@ -99,10 +99,10 @@ test("parseArgs supports run command with flag-style tool arguments", () => {
     json: false,
     toolArgs: {
       interval: "5m",
-      direction: 1,
+      direction: "1",
       desc: false,
       exchanges: ["binance", "okex"],
-      channels: [3595, 3596],
+      channels: ["3595", "3596"],
     },
   });
 });
@@ -124,13 +124,69 @@ test("parseArgs prefers saved apiKey when run command does not pass one", () => 
       toolName: "cex_candle_signal_subscription_list",
       json: false,
       toolArgs: {
-        limit: 20,
+        limit: "20",
         apiKey: "saved-key",
       },
     });
   } finally {
     rmSync(homeDir, { recursive: true, force: true });
   }
+});
+
+test("parseArgs supports future settle time diff arbitrage tool flags", () => {
+  const result = parseArgs(
+    [
+      "run",
+      "cex_future_settle_time_diff_arbitrage_list",
+      "--page",
+      "2",
+      "--quote",
+      "USDT",
+      "--assetId",
+      "12",
+    ],
+    {},
+    tmpdir(),
+  );
+
+  assert.deepEqual(result, {
+    command: "run",
+    toolName: "cex_future_settle_time_diff_arbitrage_list",
+    json: false,
+    toolArgs: {
+      page: "2",
+      quote: "USDT",
+      assetId: "12",
+    },
+  });
+});
+
+test("parseArgs supports settle diff index and limit pagination flags", () => {
+  const parsedArgs = parseArgs(
+    [
+      "run",
+      "cex_future_settle_time_diff_arbitrage_list",
+      "--index",
+      "3",
+      "--limit",
+      "25",
+      "--quote",
+      "USDT",
+    ],
+    {},
+    tmpdir(),
+  );
+
+  assert.deepEqual(parsedArgs, {
+    command: "run",
+    toolName: "cex_future_settle_time_diff_arbitrage_list",
+    json: false,
+    toolArgs: {
+      index: "3",
+      limit: "25",
+      quote: "USDT",
+    },
+  });
 });
 
 test("parseArgs keeps JSON array string flags unchanged for webhook payloads", () => {

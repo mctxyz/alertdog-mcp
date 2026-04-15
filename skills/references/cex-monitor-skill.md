@@ -21,7 +21,8 @@ Use this category when the task is about inspecting official CEX monitor feeds a
 
 | Command | Type | Auth | Risk | Description |
 | --- | --- | --- | --- | --- |
-| `alertdog run cex_asset_search` | READ | Saved auth | `safe` | Use this tool when the user wants to search CEX assets by symbol, name, or keyword. This is a public read-only operation and does not require an apiKey. |
+| `alertdog run cex_asset_search` | READ | Saved auth | `safe` | Use this tool when the user wants to search CEX assets by symbol, name, or keyword. This is an authenticated read-only operation that returns candidate asset metadata for later CEX monitor or arbitrage queries. |
+| `alertdog run cex_future_settle_time_diff_arbitrage_list` | READ | Saved auth | `safe` | Use this tool when the user wants to inspect futures funding settlement time gap arbitrage candidates. This is an authenticated read-only operation that returns normalized pagination metadata plus a list of arbitrage archive records for the selected quote or asset. |
 | `alertdog run cex_price_subscription_create` | WRITE | Saved auth | `caution` | Use this tool only when the user explicitly wants to create a CEX price monitor subscription. This is an authenticated write operation with side effects. It creates a monitor using asset, monitor type, trigger type, volume filters, exchanges, notify interval, and notification channels. |
 | `alertdog run cex_price_subscription_list` | READ | Saved auth | `safe` | Use this tool when the user wants to inspect the current CEX price monitor subscriptions. This is an authenticated read-only operation that returns normalized pagination metadata and the current subscription list. |
 | `alertdog run cex_price_subscription_set_disabled` | WRITE | Saved auth | `caution` | Use this tool only when the user explicitly wants to enable or disable one or more CEX price monitor subscriptions. This is an authenticated write operation with side effects. |
@@ -50,7 +51,7 @@ Use this category when the task is about inspecting official CEX monitor feeds a
 
 ## `cex_asset_search`
 
-Use this tool when the user wants to search CEX assets by symbol, name, or keyword. This is a public read-only operation and does not require an apiKey.
+Use this tool when the user wants to search CEX assets by symbol, name, or keyword. This is an authenticated read-only operation that returns candidate asset metadata for later CEX monitor or arbitrage queries.
 
 ### Command Summary
 
@@ -77,6 +78,64 @@ Use this tool when the user wants to search CEX assets by symbol, name, or keywo
 
 - CLI template: `alertdog run cex_asset_search --keyword <keyword>`
 - Example CLI: `alertdog run cex_asset_search --keyword ADA`
+
+## `cex_future_settle_time_diff_arbitrage_list`
+
+Use this tool when the user wants to inspect futures funding settlement time gap arbitrage candidates. This is an authenticated read-only operation that returns normalized pagination metadata plus a list of arbitrage archive records for the selected quote or asset.
+
+### Command Summary
+
+- Command: `alertdog run cex_future_settle_time_diff_arbitrage_list`
+- Category: `cex-monitor`
+- Auth: Uses saved local apiKey from `alertdog auth`
+- Type: READ
+- Risk: `safe`
+- Safe to retry: yes
+
+### Parameters
+
+> `apiKey` is omitted from this table because `alertdog run` injects it from saved local auth.
+
+| Parameter | Required | Type | Default | Rules | Description |
+| --- | --- | --- | --- | --- | --- |
+| `index` | No | `integer` | `-` | min >= 1 | Page index. Preferred pagination field. Defaults to 1. |
+| `limit` | No | `integer` | `-` | min >= 1 | Page size. Defaults to 100. |
+| `page` | No | `integer` | `-` | min >= 1 | Backward-compatible page alias. When index is omitted, page is treated as the page index. |
+| `quote` | No | `string` | `-` | minLength 1 | Quote currency filter. Defaults to USDT. |
+| `assetId` | No | `integer` | `-` | min >= 0 | Optional asset id. Use 0 or omit it to query all assets for the selected quote. |
+
+### Conditional Rules
+
+- When `assetId is omitted or 0`: The tool returns all assets for the selected quote when assetId is not provided.
+- When `page is provided`: page is kept as a backward-compatible alias. Prefer index for the page number.
+- When `index is provided`: index is the page number used for pagination.
+- When `limit is provided`: limit is the requested page size.
+
+## Response Field Guidance
+
+- `page.total`: Total number of arbitrage archive records that match the current filters.
+- `page.offset`: Zero-based offset returned by AlertDog. The upstream page size is fixed at 100.
+- `asset`: Asset metadata for the arbitrage target, including symbol, slug, name, and icon.
+- `quote`: Quote currency shared by the arbitrage pair, such as USDT.
+- `minExchange`: Exchange with the earliest settlement window in the current arbitrage comparison.
+- `maxExchange`: Exchange with the latest settlement window in the current arbitrage comparison.
+- `minSettleFundingRate`: Funding rate on the earlier-settling exchange.
+- `maxSettleFundingRate`: Funding rate on the later-settling exchange.
+- `minDiffSec`: Minimum settlement countdown in seconds among the compared futures markets.
+- `maxDiffSec`: Maximum settlement countdown in seconds among the compared futures markets.
+- `minFundingTime`: Funding settlement timestamp for the earlier exchange.
+- `maxFundingTime`: Funding settlement timestamp for the later exchange.
+- `expectedProfit`: Expected arbitrage profit estimated by AlertDog for this settlement-time gap setup.
+- `futures[].futurePrice.fundingInterval`: Funding interval in hours between the previous and next funding settlement for that futures market.
+
+### Example 1: Read the first page of USDT settlement time diff arbitrage records
+
+- CLI template: `alertdog run cex_future_settle_time_diff_arbitrage_list [--index <index>] [--limit <limit>] [--page <page>] [--quote <quote>] [--assetId <assetId>]`
+- Example CLI: `alertdog run cex_future_settle_time_diff_arbitrage_list --index 1 --limit 100 --quote USDT`
+### Example 2: Read settlement time diff arbitrage records for a single asset
+
+- CLI template: `alertdog run cex_future_settle_time_diff_arbitrage_list [--index <index>] [--limit <limit>] [--page <page>] [--quote <quote>] [--assetId <assetId>]`
+- Example CLI: `alertdog run cex_future_settle_time_diff_arbitrage_list --index 1 --limit 100 --quote USDT --assetId 2`
 
 ## `cex_price_subscription_create`
 

@@ -19,12 +19,13 @@ test("TOOL_SPECS exposes all current shared tools", () => {
     "notify_channel_delete",
     "notify_channel_set_default",
     "notify_channel_send_test",
-    "cex_offical_candle_signal_feed_list",
     "cex_asset_search",
+    "cex_future_settle_time_diff_arbitrage_list",
     "cex_price_subscription_create",
     "cex_price_subscription_list",
     "cex_price_subscription_set_disabled",
     "cex_price_subscription_delete",
+    "cex_offical_candle_signal_feed_list",
     "cex_candle_signal_subscription_create",
     "cex_candle_signal_subscription_update",
     "cex_candle_signal_subscription_list",
@@ -80,9 +81,38 @@ test("getToolSpec returns cex asset search as a public read-only tool", () => {
   const contract = getToolSpec("cex_asset_search");
 
   assert.equal(contract.category, "cex-monitor");
-  assert.equal(contract.requiresApiKey, false);
+  assert.equal(contract.requiresApiKey, true);
   assert.equal(contract.sideEffect, false);
   assert.equal(contract.safeToRetry, true);
+});
+
+test("getToolSpec returns cex future settle time diff arbitrage list as a read-only tool", () => {
+  const contract = getToolSpec("cex_future_settle_time_diff_arbitrage_list");
+
+  assert.equal(contract.category, "cex-monitor");
+  assert.equal(contract.requiresApiKey, true);
+  assert.equal(contract.sideEffect, false);
+  assert.equal(contract.safeToRetry, true);
+  assert.equal(
+    Boolean(contract.inputSchema.properties?.index),
+    true,
+  );
+  assert.equal(
+    Boolean(contract.inputSchema.properties?.limit),
+    true,
+  );
+  assert.equal(
+    contract.responseFieldDescriptions?.some(
+      (item) => item.field === "expectedProfit" && /expected arbitrage profit/i.test(item.description),
+    ),
+    true,
+  );
+  assert.equal(
+    contract.responseFieldDescriptions?.some(
+      (item) => item.field === "futures[].futurePrice.fundingInterval" && /hours between the previous and next funding settlement/i.test(item.description),
+    ),
+    true,
+  );
 });
 
 test("getToolSpec returns cex price subscription create as a write tool", () => {

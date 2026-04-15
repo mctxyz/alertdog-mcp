@@ -1,53 +1,46 @@
 import {
   AlertDogClient,
-  AlertDogClientError,
-  type AlertDogCexAssetRecord,
-  type AlertDogCexPriceSubscriptionCreatePayload,
-  type AlertDogCexPriceSubscriptionDeletePayload,
-  type AlertDogCexPriceSubscriptionListPage,
-  type AlertDogCexPriceSubscriptionSetDisabledPayload,
-  type AlertDogCexCandleSignalSubscriptionCreatePayload,
-  type AlertDogCexCandleSignalSubscriptionUpdatePayload,
-  type AlertDogCexCandleSignalSubscriptionDeletePayload,
-  type AlertDogCexCandleSignalSubscriptionListPage,
-  type AlertDogCexCandleSignalSubscriptionSetDisabledPayload,
-  type AlertDogCexCandleSignalFeedAssetRecord,
-  type AlertDogCexCandleSignalFeedPage,
-  type AlertDogCexCandleSignalFeedRecord,
-  type AlertDogCexCandleSignalHistoryPage,
-  type AlertDogCexCandleSignalHistoryFuturePriceRecord,
-  type AlertDogCexCandleSignalHistoryFutureRecord,
-  type AlertDogCexCandleSignalHistoryRecord,
-  type AlertDogCexCandleSignalHistorySpotPriceRecord,
-  type AlertDogCexCandleSignalHistorySpotRecord,
 } from "../../api/alertdog.js";
 import type {
   AlertDogToolRegistration,
   ToolExecutorMap,
-  ToolPayload,
 } from "../tool-types.js";
 import { createExecutorsFromRegistrations } from "../tools/common.js";
 import { defineAlertDogToolSpec } from "./define-tool-contract.js";
-import { normalizeAlertDogToolError } from "./helpers/alertdog-tool.js";
 import {
-  normalizeUnknownValue,
-  optionalBoolean,
-  optionalInteger,
-  optionalPageFlip,
-  optionalPositiveInteger,
-  optionalPositiveOrZeroInteger,
-  optionalNumericString,
-  requireBoolean,
-  requireEnumNumber,
-  requireEnumString,
-  requireNumericString,
-  requirePositiveInt,
-  requirePositiveIntArray,
-  requirePositiveOrZeroInt,
-  requireString,
-  requireStringArray,
-  requireZeroOrOne,
-} from "./helpers/input-tool.js";
+  buildCexPriceSubscriptionCreatePayload,
+  buildCexPriceSubscriptionDeletePayload,
+  buildCexPriceSubscriptionSetDisabledPayload,
+  buildCandleSignalSubscriptionCreatePayload,
+  buildCandleSignalSubscriptionDeletePayload,
+  buildCandleSignalSubscriptionSetDisabledPayload,
+  buildCandleSignalSubscriptionUpdatePayload,
+  normalizeCandleSignalFeedListArgs,
+  normalizeCandleSignalHistoryListArgs,
+  normalizeCandleSignalSubscriptionCreateArgs,
+  normalizeCandleSignalSubscriptionDeleteArgs,
+  normalizeCandleSignalSubscriptionListArgs,
+  normalizeCandleSignalSubscriptionListPayload,
+  normalizeCandleSignalSubscriptionPage,
+  normalizeCandleSignalSubscriptionSetDisabledArgs,
+  normalizeCandleSignalSubscriptionUpdateArgs,
+  normalizeCexAssetSearchArgs,
+  normalizeCexFutureSettleTimeDiffArbitrageListArgs,
+  normalizeIndexedSubscriptionPage,
+  normalizeCexPriceSubscriptionCreateArgs,
+  normalizeCexPriceSubscriptionDeleteArgs,
+  normalizeCexPriceSubscriptionListArgs,
+  normalizeCexPriceSubscriptionSetDisabledArgs,
+  normalizeFeedPage,
+  normalizeHistoryPage,
+  normalizePriceSubscription,
+  normalizeSubscriptionPage,
+  toCexAssetPayload,
+  toCexFutureSettleTimeDiffArbitragePayload,
+  toHistoryPayload,
+  toSignalPayload,
+} from "./helpers/cex-monitor-tool-helper.js";
+import { normalizeAlertDogToolError } from "./helpers/alertdog-tool.js";
 
 
 
@@ -109,7 +102,6 @@ export const CEX_CANDLE_SIGNAL_NOTIFY_INTERVAL_VALUES = [
 export const CEX_PRICE_MONITOR_TYPE_VALUES = [1, 2] as const;
 export const CEX_PRICE_MONITOR_TYPE_CHANGE = 1;
 export const CEX_PRICE_MONITOR_TYPE_PRICE = 2;
-
 export const CEX_PRICE_MONITOR_INTERVAL_1M = 60;
 export const CEX_PRICE_MONITOR_INTERVAL_5M = 300;
 export const CEX_PRICE_MONITOR_INTERVAL_15M = 900;
@@ -153,7 +145,8 @@ const CEX_PRICE_MONITOR_FIELD_DESCRIPTIONS = [
   },
   {
     field: "value",
-    description: 'Threshold value. For monitor_type=1 this is a percentage such as "0.01"; for monitor_type=2 this is the target price.',
+    description:
+      'Threshold value. For monitor_type=1 this is a percentage such as "0.01"; for monitor_type=2 this is the target price.',
   },
   {
     field: "monitor_interval",
@@ -185,6 +178,26 @@ const CEX_PRICE_MONITOR_FIELD_DESCRIPTIONS = [
     description: "Comparison operator. Use 1 for >= and 2 for <=.",
   },
 ] as const;
+
+const CEX_PRICE_TOOL_SHARED_DEPS = {
+  monitorTypeValues: CEX_PRICE_MONITOR_TYPE_VALUES,
+  monitorIntervalValues: CEX_PRICE_MONITOR_INTERVAL_VALUES,
+  triggerTypeValues: CEX_PRICE_TRIGGER_TYPE_VALUES,
+  symbolOperatorValues: CEX_PRICE_SYMBOL_OPERATOR_VALUES,
+  exchangeValues: CEX_EXCHANGE_VALUES,
+  notifyIntervalValues: CEX_CANDLE_SIGNAL_NOTIFY_INTERVAL_VALUES,
+  volumeIntervalValues: CEX_CANDLE_SIGNAL_INTERVAL_VALUES,
+} as const;
+
+const CEX_CANDLE_SIGNAL_TOOL_SHARED_DEPS = {
+  intervalValues: CEX_CANDLE_SIGNAL_INTERVAL_VALUES,
+  directionValues: [
+    CEX_CANDLE_SIGNAL_DIRECTION_BOTH,
+    CEX_CANDLE_SIGNAL_DIRECTION_UP,
+    CEX_CANDLE_SIGNAL_DIRECTION_DOWN,
+  ] as const,
+  notifyIntervalValues: CEX_CANDLE_SIGNAL_NOTIFY_INTERVAL_VALUES,
+} as const;
 
 const CEX_CANDLE_SIGNAL_FEED_RESPONSE_FIELD_DESCRIPTIONS = [
   {
@@ -290,6 +303,66 @@ const CEX_CANDLE_SIGNAL_FEED_RESPONSE_FIELD_DESCRIPTIONS = [
   },
 ] as const;
 
+const CEX_FUTURE_SETTLE_TIME_DIFF_ARBITRAGE_RESPONSE_FIELD_DESCRIPTIONS = [
+  {
+    field: "page.total",
+    description: "Total number of arbitrage archive records that match the current filters.",
+  },
+  {
+    field: "page.offset",
+    description: "Zero-based offset returned by AlertDog. The upstream page size is fixed at 100.",
+  },
+  {
+    field: "asset",
+    description: "Asset metadata for the arbitrage target, including symbol, slug, name, and icon.",
+  },
+  {
+    field: "quote",
+    description: "Quote currency shared by the arbitrage pair, such as USDT.",
+  },
+  {
+    field: "minExchange",
+    description: "Exchange with the earliest settlement window in the current arbitrage comparison.",
+  },
+  {
+    field: "maxExchange",
+    description: "Exchange with the latest settlement window in the current arbitrage comparison.",
+  },
+  {
+    field: "minSettleFundingRate",
+    description: "Funding rate on the earlier-settling exchange.",
+  },
+  {
+    field: "maxSettleFundingRate",
+    description: "Funding rate on the later-settling exchange.",
+  },
+  {
+    field: "minDiffSec",
+    description: "Minimum settlement countdown in seconds among the compared futures markets.",
+  },
+  {
+    field: "maxDiffSec",
+    description: "Maximum settlement countdown in seconds among the compared futures markets.",
+  },
+  {
+    field: "minFundingTime",
+    description: "Funding settlement timestamp for the earlier exchange.",
+  },
+  {
+    field: "maxFundingTime",
+    description: "Funding settlement timestamp for the later exchange.",
+  },
+  {
+    field: "expectedProfit",
+    description: "Expected arbitrage profit estimated by AlertDog for this settlement-time gap setup.",
+  },
+  {
+    field: "futures[].futurePrice.fundingInterval",
+    description:
+      "Funding interval in hours between the previous and next funding settlement for that futures market.",
+  },
+] as const;
+
 const CEX_CANDLE_SIGNAL_HISTORY_RESPONSE_FIELD_DESCRIPTIONS = [
   ...CEX_CANDLE_SIGNAL_FEED_RESPONSE_FIELD_DESCRIPTIONS,
   {
@@ -331,54 +404,11 @@ const CEX_CANDLE_SIGNAL_HISTORY_RESPONSE_FIELD_DESCRIPTIONS = [
   },
 ] as const;
 
-interface CexAssetSearchArgs {
-  keyword: string;
-  apiKey: string;
-
-}
-
-interface CexPriceSubscriptionCreateArgs {
-  apiKey: string;
-  assetId: number;
-  monitorType: number;
-  monitorInterval: number;
-  triggerType: number;
-  volInterval?: string;
-  minQuoteVolume?: string;
-  volVolumeMultiple?: string;
-  symbolOperator: number;
-  value: string;
-  exchanges: string[];
-  notifyInterval: number;
-  lastNotify: number;
-  notifyHistoryRetention: number;
-  channels: number[];
-  disabled: number;
-}
-
-interface CexPriceSubscriptionListArgs {
-  apiKey: string;
-  index: number;
-  limit: number;
-  desc: boolean;
-}
-
-interface CexPriceSubscriptionDeleteArgs {
-  apiKey: string;
-  ids: number[];
-}
-
-interface CexPriceSubscriptionSetDisabledArgs {
-  apiKey: string;
-  ids: number[];
-  disable: boolean;
-}
-
 export const CEX_PRICE_TOOL_REGISTRATIONS: AlertDogToolRegistration<AlertDogClient>[] = [
   defineAlertDogToolSpec<AlertDogClient>({
     name: "cex_asset_search",
     description:
-      "Use this tool when the user wants to search CEX assets by symbol, name, or keyword. This is a public read-only operation and does not require an apiKey.",
+      "Use this tool when the user wants to search CEX assets by symbol, name, or keyword. This is an authenticated read-only operation that returns candidate asset metadata for later CEX monitor or arbitrage queries.",
     inputSchema: {
       type: "object",
       properties: {
@@ -415,6 +445,114 @@ export const CEX_PRICE_TOOL_REGISTRATIONS: AlertDogToolRegistration<AlertDogClie
           ok: true,
           count: assets.length,
           assets: assets.map(toCexAssetPayload),
+        };
+      } catch (error) {
+        return normalizeAlertDogToolError(error, "Unknown error");
+      }
+    },
+  }),
+  defineAlertDogToolSpec<AlertDogClient>({
+    name: "cex_future_settle_time_diff_arbitrage_list",
+    description:
+      "Use this tool when the user wants to inspect futures funding settlement time gap arbitrage candidates. This is an authenticated read-only operation that returns normalized pagination metadata plus a list of arbitrage archive records for the selected quote or asset.",
+    inputSchema: {
+      type: "object",
+      properties: {
+        index: {
+          type: "integer",
+          minimum: 1,
+          description: "Page index. Preferred pagination field. Defaults to 1.",
+        },
+        limit: {
+          type: "integer",
+          minimum: 1,
+          description: "Page size. Defaults to 100.",
+        },
+        page: {
+          type: "integer",
+          minimum: 1,
+          description: "Backward-compatible page alias. When index is omitted, page is treated as the page index.",
+        },
+        quote: {
+          type: "string",
+          minLength: 1,
+          description: "Quote currency filter. Defaults to USDT.",
+        },
+        assetId: {
+          type: "integer",
+          minimum: 0,
+          description: "Optional asset id. Use 0 or omit it to query all assets for the selected quote.",
+        },
+      },
+    },
+    requiresApiKey: true,
+    sideEffect: false,
+    safeToRetry: true,
+    riskLevel: "safe",
+    category: "cex-monitor",
+    recommendedBefore: [],
+    conditionalRules: [
+      {
+        when: "assetId is omitted or 0",
+        requiredFields: ["quote"],
+        message: "The tool returns all assets for the selected quote when assetId is not provided.",
+      },
+      {
+        when: "page is provided",
+        requiredFields: [],
+        message: "page is kept as a backward-compatible alias. Prefer index for the page number.",
+      },
+      {
+        when: "index is provided",
+        requiredFields: ["index"],
+        message: "index is the page number used for pagination.",
+      },
+      {
+        when: "limit is provided",
+        requiredFields: ["limit"],
+        message: "limit is the requested page size.",
+      },
+    ],
+    examples: [
+      {
+        title: "Read the first page of USDT settlement time diff arbitrage records",
+        args: {
+          apiKey: "user-api-key",
+          index: 1,
+          limit: 100,
+          quote: "USDT",
+        },
+      },
+      {
+        title: "Read settlement time diff arbitrage records for a single asset",
+        args: {
+          apiKey: "user-api-key",
+          index: 1,
+          limit: 100,
+          quote: "USDT",
+          assetId: 2,
+        },
+      },
+    ],
+    responseFieldDescriptions: [...CEX_FUTURE_SETTLE_TIME_DIFF_ARBITRAGE_RESPONSE_FIELD_DESCRIPTIONS],
+    handler: async (client, rawArgs = {}) => {
+      try {
+        const args = normalizeCexFutureSettleTimeDiffArbitrageListArgs(rawArgs);
+        const response = await client.listCexFutureSettleTimeDiffArbitrage(
+          { apiKey: args.apiKey },
+          {
+            index: args.index,
+            limit: args.limit,
+            quote: args.quote,
+            ...(args.assetId > 0 ? { assetId: args.assetId } : {}),
+          },
+        );
+
+        return {
+          ok: true,
+          count: response.records.length,
+          page: normalizeIndexedSubscriptionPage(response.page, args.index, args.limit),
+          records: response.records.map((record) => toCexFutureSettleTimeDiffArbitragePayload(record)),
         };
       } catch (error) {
         return normalizeAlertDogToolError(error, "Unknown error");
@@ -627,7 +765,7 @@ export const CEX_PRICE_TOOL_REGISTRATIONS: AlertDogToolRegistration<AlertDogClie
     ],
     handler: async (client, rawArgs = {}) => {
       try {
-        const args = normalizeCexPriceSubscriptionCreateArgs(rawArgs);
+        const args = normalizeCexPriceSubscriptionCreateArgs(rawArgs, CEX_PRICE_TOOL_SHARED_DEPS);
         const result = await client.createCexPriceSubscription(
           { apiKey: args.apiKey },
           buildCexPriceSubscriptionCreatePayload(args),
@@ -861,317 +999,6 @@ export function createCexPriceToolExecutors(client: AlertDogClient): ToolExecuto
   return createExecutorsFromRegistrations(client, CEX_PRICE_TOOL_REGISTRATIONS);
 }
 
-// normalizeCexAssetSearchArgs 校验资产搜索参数。
-function normalizeCexAssetSearchArgs(rawArgs: Record<string, unknown>): CexAssetSearchArgs {
-  return {
-      apiKey: requireString(rawArgs.apiKey, "apiKey"),
-      keyword: requireString(rawArgs.keyword, "keyword")
-  };
-}
-
-// normalizeCexPriceSubscriptionCreateArgs 校验价格监控创建参数。
-function normalizeCexPriceSubscriptionCreateArgs(
-  rawArgs: Record<string, unknown>,
-): CexPriceSubscriptionCreateArgs {
-  return {
-    apiKey: requireString(rawArgs.apiKey, "apiKey"),
-    assetId: requirePositiveOrZeroInt(rawArgs.asset_id, "asset_id"),
-    monitorType: requireEnumNumber(rawArgs.monitor_type, "monitor_type", CEX_PRICE_MONITOR_TYPE_VALUES),
-    monitorInterval: requireEnumNumber(
-      rawArgs.monitor_interval,
-      "monitor_interval",
-      CEX_PRICE_MONITOR_INTERVAL_VALUES,
-    ),
-    triggerType: requireEnumNumber(rawArgs.type, "type", CEX_PRICE_TRIGGER_TYPE_VALUES),
-    symbolOperator: requireEnumNumber(rawArgs.symbol, "symbol", CEX_PRICE_SYMBOL_OPERATOR_VALUES),
-    value: requireNumericString(rawArgs.value, "value"),
-    exchanges: requireExchangeArray(rawArgs.exchanges, "exchanges"),
-    notifyInterval: requireEnumNumber(
-      rawArgs.notify_interval,
-      "notify_interval",
-      CEX_CANDLE_SIGNAL_NOTIFY_INTERVAL_VALUES,
-    ),
-    lastNotify: requirePositiveOrZeroInt(rawArgs.last_notify ?? 0, "last_notify"),
-    notifyHistoryRetention: requireZeroOrOne(
-      rawArgs.notify_history_retention,
-      1,
-      "notify_history_retention",
-    ),
-    channels: requirePositiveIntArray(rawArgs.channels, "channels"),
-    disabled: requireZeroOrOne(rawArgs.disabled, 0, "disabled"),
-    ...normalizeVolumeFilterArgs(rawArgs),
-  };
-}
-
-// normalizeCexPriceSubscriptionListArgs 校验并补齐价格监控列表参数。
-function normalizeCexPriceSubscriptionListArgs(
-  rawArgs: Record<string, unknown>,
-): CexPriceSubscriptionListArgs {
-  return {
-    apiKey: requireString(rawArgs.apiKey, "apiKey"),
-    index: optionalPositiveInteger(rawArgs.index, 1, "index"),
-    limit: optionalPositiveInteger(rawArgs.limit, 20, "limit"),
-    desc: optionalBoolean(rawArgs.desc, true),
-  };
-}
-
-// normalizeCexPriceSubscriptionDeleteArgs 校验价格监控删除参数。
-function normalizeCexPriceSubscriptionDeleteArgs(
-  rawArgs: Record<string, unknown>,
-): CexPriceSubscriptionDeleteArgs {
-  return {
-    apiKey: requireString(rawArgs.apiKey, "apiKey"),
-    ids: requirePositiveIntArray(rawArgs.ids, "ids"),
-  };
-}
-
-// normalizeCexPriceSubscriptionSetDisabledArgs 校验价格监控启用或禁用参数。
-function normalizeCexPriceSubscriptionSetDisabledArgs(
-  rawArgs: Record<string, unknown>,
-): CexPriceSubscriptionSetDisabledArgs {
-  return {
-    apiKey: requireString(rawArgs.apiKey, "apiKey"),
-    ids: requirePositiveIntArray(rawArgs.ids, "ids"),
-    disable: requireBoolean(rawArgs.disable, "disable"),
-  };
-}
-
-// normalizeVolumeFilterArgs 校验交易量过滤参数，只有启用过滤时才要求传入 vol_interval。
-function normalizeVolumeFilterArgs(
-  rawArgs: Record<string, unknown>,
-): Pick<CexPriceSubscriptionCreateArgs, "volInterval" | "minQuoteVolume" | "volVolumeMultiple"> {
-  const minQuoteVolume = optionalNumericString(rawArgs.min_quote_volume, "min_quote_volume");
-  const volVolumeMultiple = optionalNumericString(rawArgs.vol_volume_multiple, "vol_volume_multiple");
-  const hasVolumeFilter = Boolean(minQuoteVolume || volVolumeMultiple);
-
-  if (!hasVolumeFilter) {
-    return {};
-  }
-
-  return {
-    minQuoteVolume,
-    volVolumeMultiple,
-    volInterval: requireEnumString(rawArgs.vol_interval, "vol_interval", CEX_CANDLE_SIGNAL_INTERVAL_VALUES),
-  };
-}
-
-// buildCexPriceSubscriptionCreatePayload 组装价格监控创建请求体。
-function buildCexPriceSubscriptionCreatePayload(
-  args: CexPriceSubscriptionCreateArgs,
-): AlertDogCexPriceSubscriptionCreatePayload {
-  return {
-    asset_id: args.assetId,
-    monitor_type: args.monitorType,
-    monitor_interval: args.monitorInterval,
-    type: args.triggerType,
-    symbol: args.symbolOperator,
-    value: args.value,
-    exchanges: args.exchanges,
-    notify_interval: args.notifyInterval,
-    last_notify: args.lastNotify,
-    notify_history_retention: args.notifyHistoryRetention,
-    channels: args.channels,
-    disabled: args.disabled,
-    ...(args.volInterval ? { vol_interval: args.volInterval } : {}),
-    ...(args.minQuoteVolume ? { min_quote_volume: args.minQuoteVolume } : {}),
-    ...(args.volVolumeMultiple ? { vol_volume_multiple: args.volVolumeMultiple } : {}),
-  };
-}
-
-// buildCexPriceSubscriptionDeletePayload 组装价格监控删除请求体。
-function buildCexPriceSubscriptionDeletePayload(
-  args: CexPriceSubscriptionDeleteArgs,
-): AlertDogCexPriceSubscriptionDeletePayload {
-  return { ids: args.ids };
-}
-
-// buildCexPriceSubscriptionSetDisabledPayload 组装价格监控启用或禁用请求体。
-function buildCexPriceSubscriptionSetDisabledPayload(
-  args: CexPriceSubscriptionSetDisabledArgs,
-): AlertDogCexPriceSubscriptionSetDisabledPayload {
-  return { ids: args.ids, disable: args.disable };
-}
-
-// toCexAssetPayload 把资产搜索结果转换成更适合 Agent 消费的结构。
-function toCexAssetPayload(record: AlertDogCexAssetRecord): ToolPayload {
-  return {
-    id: record.id,
-    createdAt: record.createdAt,
-    updatedAt: record.updated_at,
-    symbol: record.symbol,
-    slug: record.slug,
-    name: record.name,
-    category: record.category,
-    icon: record.icon,
-  };
-}
-
-// normalizeSubscriptionPage 把价格监控列表分页信息整理成稳定结构。
-function normalizeSubscriptionPage(page: AlertDogCexPriceSubscriptionListPage | null): ToolPayload | null {
-  if (!page) {
-    return null;
-  }
-  return {
-    total: page.total ?? null,
-    base: page.base ?? null,
-    offset: page.offset ?? null,
-    index: page.index ?? null,
-    next: page.next ?? null,
-    limit: page.limit ?? null,
-    desc: page.desc ?? null,
-  };
-}
-
-// normalizePriceSubscription 按真实返回结构归一化价格监控订阅对象。
-function normalizePriceSubscription(value: unknown): unknown {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return value;
-  }
-  const record = value as Record<string, unknown>;
-  const asset = normalizePriceSubscriptionAsset(record.asset);
-  const channels = normalizePriceSubscriptionChannels(record.channels);
-  return {
-    id: record.id ?? null,
-    monitorType: record.monitor_type ?? null,
-    type: record.type ?? null,
-    symbol: record.symbol ?? null,
-    value: record.value ?? null,
-    exchanges: normalizePriceSubscriptionExchanges(record.exchanges),
-    monitorInterval: record.monitor_interval ?? null,
-    volInterval: record.vol_interval ?? null,
-    minQuoteVolume: record.min_quote_volume ?? null,
-    volVolumeMultiple: record.vol_volume_multiple ?? null,
-    notifyInterval: record.notify_interval ?? null,
-    asset,
-    monitorAllAssets: asset === null,
-    once: record.once ?? null,
-    lastNotify: record.last_notify ?? null,
-    notifyHistoryRetention: record.notify_history_retention ?? null,
-    channels,
-    nextNotifyAt: record.next_notify_at ?? null,
-    disabled: record.disabled ?? null,
-  };
-}
-
-// normalizePriceSubscriptionAsset 归一化价格监控订阅里的资产对象，空值表示监控所有资产。
-function normalizePriceSubscriptionAsset(value: unknown): ToolPayload | null {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return null;
-  }
-  const record = value as Record<string, unknown>;
-  return {
-    id: record.id ?? null,
-    createdAt: record.createdAt ?? null,
-    updatedAt: record.updated_at ?? null,
-    symbol: record.symbol ?? null,
-    slug: record.slug ?? null,
-    name: record.name ?? null,
-    category: record.category ?? null,
-    icon: record.icon ?? null,
-  };
-}
-
-// normalizePriceSubscriptionExchanges 归一化价格监控订阅里的交易所数组。
-function normalizePriceSubscriptionExchanges(value: unknown): unknown[] {
-  if (!Array.isArray(value)) return [];
-  return value.map((item) => {
-    if (!item || typeof item !== "object" || Array.isArray(item)) {
-      return item;
-    }
-    const record = item as Record<string, unknown>;
-    return {
-      id: record.id ?? null,
-      subscribeId: record.subscribe_id ?? null,
-      exchange: record.exchange ?? null,
-    };
-  });
-}
-
-// normalizePriceSubscriptionChannels 过滤并归一化价格监控订阅里的通知渠道关键信息。
-function normalizePriceSubscriptionChannels(value: unknown): unknown[] {
-  if (!Array.isArray(value)) return [];
-  return value.map((item) => {
-    if (!item || typeof item !== "object" || Array.isArray(item)) {
-      return item;
-    }
-    const record = item as Record<string, unknown>;
-    return {
-      id: record.id ?? null,
-      userId: record.user_id ?? null,
-      channel: record.channel_id ?? null,
-      name: record.name ?? null,
-      chatId: record.chat_id ?? null,
-      lastSend: record.last_send ?? null,
-      failedCount: record.failed_count ?? null,
-      disabled: record.disabled ?? null,
-      disabledReason: record.disabled_reason ?? null,
-      isDefault: record.is_default ?? null,
-    };
-  });
-}
-
-// requireExchangeArray 校验交易所数组参数，只允许当前支持的交易所值。
-function requireExchangeArray(value: unknown, fieldName: string): string[] {
-  const exchanges = requireStringArray(value, fieldName);
-  for (const exchange of exchanges) {
-    if (!CEX_EXCHANGE_VALUES.includes(exchange as never)) {
-      throw new Error(`${fieldName} must only contain: ${CEX_EXCHANGE_VALUES.join(", ")}`);
-    }
-  }
-  return exchanges;
-}
-
-interface CandleSignalFeedListArgs {
-  apiKey: string;
-  next: number;
-  limit: number;
-  desc: boolean;
-}
-
-interface CandleSignalSubscriptionCreateArgs {
-  apiKey: string;
-  interval: string;
-  minQuoteVolume: string;
-  minVolumeMultiple: string;
-  minAbsChangePct: string;
-  direction: number;
-  exchanges: string[];
-  notifyInterval: number;
-  channels: number[];
-  disabled: number;
-}
-
-interface CandleSignalSubscriptionListArgs {
-  apiKey: string;
-  index: number;
-  limit: number;
-  desc: boolean;
-}
-
-interface CandleSignalSubscriptionUpdateArgs extends CandleSignalSubscriptionCreateArgs {
-  id: number;
-}
-
-interface CandleSignalHistoryListArgs {
-  apiKey: string;
-  subscribeId?: number;
-  cursor: number;
-  limit: number;
-  desc: boolean;
-  pageFlip?: "prev" | "next";
-}
-
-interface CandleSignalSubscriptionSetDisabledArgs {
-  apiKey: string;
-  ids: number[];
-  disable: boolean;
-}
-
-interface CandleSignalSubscriptionDeleteArgs {
-  apiKey: string;
-  ids: number[];
-}
-
 export const CEX_CANDLE_SIGNAL_TOOL_REGISTRATIONS: AlertDogToolRegistration<AlertDogClient>[] = [
   defineAlertDogToolSpec<AlertDogClient>({
     name: "cex_offical_candle_signal_feed_list",
@@ -1383,7 +1210,10 @@ export const CEX_CANDLE_SIGNAL_TOOL_REGISTRATIONS: AlertDogToolRegistration<Aler
     ],
     handler: async (client, rawArgs = {}) => {
       try {
-        const args = normalizeCandleSignalSubscriptionCreateArgs(rawArgs);
+        const args = normalizeCandleSignalSubscriptionCreateArgs(
+          rawArgs,
+          CEX_CANDLE_SIGNAL_TOOL_SHARED_DEPS,
+        );
         const payload = buildCandleSignalSubscriptionCreatePayload(args);
         const result = await client.createCexCandleSignalSubscription(
           { apiKey: args.apiKey },
@@ -1566,7 +1396,10 @@ export const CEX_CANDLE_SIGNAL_TOOL_REGISTRATIONS: AlertDogToolRegistration<Aler
     ],
     handler: async (client, rawArgs = {}) => {
       try {
-        const args = normalizeCandleSignalSubscriptionUpdateArgs(rawArgs);
+        const args = normalizeCandleSignalSubscriptionUpdateArgs(
+          rawArgs,
+          CEX_CANDLE_SIGNAL_TOOL_SHARED_DEPS,
+        );
         const payload = buildCandleSignalSubscriptionUpdatePayload(args);
         const result = await client.updateCexCandleSignalSubscription(
           { apiKey: args.apiKey },
@@ -1655,7 +1488,7 @@ export const CEX_CANDLE_SIGNAL_TOOL_REGISTRATIONS: AlertDogToolRegistration<Aler
           ok: true,
           count: response.subscriptions.length,
           page: normalizeCandleSignalSubscriptionPage(response.page),
-          subscriptions: response.subscriptions.map((item) => normalizeUnknownValue(item)),
+          subscriptions: response.subscriptions.map((item) => normalizeCandleSignalSubscriptionListPayload(item)),
         };
       } catch (error) {
         return normalizeAlertDogToolError(error, "Unknown error");
@@ -2071,361 +1904,4 @@ export function createCexCandleSignalToolExecutors(
   client: AlertDogClient,
 ): ToolExecutorMap {
   return createExecutorsFromRegistrations(client, CEX_CANDLE_SIGNAL_TOOL_REGISTRATIONS);
-}
-
-// normalizeCandleSignalFeedListArgs 校验并补齐量价异动 feed 查询参数。
-function normalizeCandleSignalFeedListArgs(rawArgs: Record<string, unknown>): CandleSignalFeedListArgs {
-  return {
-    apiKey: requireString(rawArgs.apiKey, "apiKey"),
-    next: optionalInteger(rawArgs.next, -1, "next"),
-    limit: optionalPositiveInteger(rawArgs.limit, 10, "limit"),
-    desc: optionalBoolean(rawArgs.desc, true, "desc"),
-  };
-}
-
-// normalizeCandleSignalSubscriptionCreateArgs 校验并收窄量价异动订阅创建参数。
-function normalizeCandleSignalSubscriptionCreateArgs(
-  rawArgs: Record<string, unknown>,
-): CandleSignalSubscriptionCreateArgs {
-  return {
-    apiKey: requireString(rawArgs.apiKey, "apiKey"),
-    interval: requireInterval(rawArgs.interval),
-    minQuoteVolume: requireNumericString(rawArgs.min_quote_volume, "min_quote_volume"),
-    minVolumeMultiple: requireNumericString(rawArgs.min_volume_multiple, "min_volume_multiple"),
-    minAbsChangePct: requireNumericString(rawArgs.min_abs_change_pct, "min_abs_change_pct"),
-    direction: requireDirection(rawArgs.direction),
-    exchanges: requireStringArray(rawArgs.exchanges, "exchanges"),
-    notifyInterval: requireNotifyInterval(rawArgs.notify_interval),
-    channels: requirePositiveIntArray(rawArgs.channels, "channels"),
-    disabled: requireZeroOrOne(rawArgs.disabled, 0, "disabled"),
-  };
-}
-
-// normalizeCandleSignalSubscriptionListArgs 校验并补齐量价异动订阅列表参数。
-function normalizeCandleSignalSubscriptionListArgs(
-  rawArgs: Record<string, unknown>,
-): CandleSignalSubscriptionListArgs {
-  return {
-    apiKey: requireString(rawArgs.apiKey, "apiKey"),
-    index: optionalPositiveInteger(rawArgs.index, 1, "index"),
-    limit: optionalPositiveInteger(rawArgs.limit, 20, "limit"),
-    desc: optionalBoolean(rawArgs.desc, true, "desc"),
-  };
-}
-
-// normalizeCandleSignalSubscriptionUpdateArgs 校验并补齐量价异动订阅更新参数。
-function normalizeCandleSignalSubscriptionUpdateArgs(
-  rawArgs: Record<string, unknown>,
-): CandleSignalSubscriptionUpdateArgs {
-  const createArgs = normalizeCandleSignalSubscriptionCreateArgs(rawArgs);
-  return {
-    ...createArgs,
-    id: requirePositiveInt(rawArgs.id, "id"),
-  };
-}
-
-// normalizeCandleSignalHistoryListArgs 校验并补齐量价异动历史查询参数。
-function normalizeCandleSignalHistoryListArgs(
-  rawArgs: Record<string, unknown>,
-): CandleSignalHistoryListArgs {
-  return {
-    apiKey: requireString(rawArgs.apiKey, "apiKey"),
-    ...(rawArgs.subscribe_id !== undefined && rawArgs.subscribe_id !== null && rawArgs.subscribe_id !== ""
-      ? { subscribeId: requirePositiveInt(rawArgs.subscribe_id, "subscribe_id") }
-      : {}),
-    cursor: optionalPositiveOrZeroInteger(rawArgs.cursor, 0, "cursor"),
-    limit: optionalPositiveInteger(rawArgs.limit, 100, "limit"),
-    desc: optionalBoolean(rawArgs.desc, true, "desc"),
-    ...(rawArgs.pageFlip !== undefined && rawArgs.pageFlip !== null && rawArgs.pageFlip !== ""
-      ? { pageFlip: optionalPageFlip(rawArgs.pageFlip) }
-      : {}),
-  };
-}
-
-// normalizeCandleSignalSubscriptionSetDisabledArgs 校验批量启停量价异动订阅参数。
-function normalizeCandleSignalSubscriptionSetDisabledArgs(
-  rawArgs: Record<string, unknown>,
-): CandleSignalSubscriptionSetDisabledArgs {
-  return {
-    apiKey: requireString(rawArgs.apiKey, "apiKey"),
-    ids: requirePositiveIntArray(rawArgs.ids, "ids"),
-    disable: requireBoolean(rawArgs.disable, "disable"),
-  };
-}
-
-// normalizeCandleSignalSubscriptionDeleteArgs 校验批量删除量价异动订阅参数。
-function normalizeCandleSignalSubscriptionDeleteArgs(
-  rawArgs: Record<string, unknown>,
-): CandleSignalSubscriptionDeleteArgs {
-  return {
-    apiKey: requireString(rawArgs.apiKey, "apiKey"),
-    ids: requirePositiveIntArray(rawArgs.ids, "ids"),
-  };
-}
-
-// buildCandleSignalSubscriptionCreatePayload 组装创建量价异动订阅的真实请求体。
-function buildCandleSignalSubscriptionCreatePayload(
-  args: CandleSignalSubscriptionCreateArgs,
-): AlertDogCexCandleSignalSubscriptionCreatePayload {
-  return {
-    interval: args.interval,
-    min_quote_volume: args.minQuoteVolume,
-    min_volume_multiple: args.minVolumeMultiple,
-    min_abs_change_pct: args.minAbsChangePct,
-    direction: args.direction,
-    exchanges: args.exchanges,
-    notify_interval: args.notifyInterval,
-    channels: args.channels,
-    disabled: args.disabled,
-  };
-}
-
-// buildCandleSignalSubscriptionUpdatePayload 组装更新量价异动订阅的真实请求体。
-function buildCandleSignalSubscriptionUpdatePayload(
-  args: CandleSignalSubscriptionUpdateArgs,
-): AlertDogCexCandleSignalSubscriptionUpdatePayload {
-  return {
-    id: args.id,
-    ...buildCandleSignalSubscriptionCreatePayload(args),
-  };
-}
-
-// buildCandleSignalSubscriptionSetDisabledPayload 组装批量启停量价异动订阅请求体。
-function buildCandleSignalSubscriptionSetDisabledPayload(
-  args: CandleSignalSubscriptionSetDisabledArgs,
-): AlertDogCexCandleSignalSubscriptionSetDisabledPayload {
-  return {
-    ids: args.ids,
-    disable: args.disable,
-  };
-}
-
-// buildCandleSignalSubscriptionDeletePayload 组装批量删除量价异动订阅请求体。
-function buildCandleSignalSubscriptionDeletePayload(
-  args: CandleSignalSubscriptionDeleteArgs,
-): AlertDogCexCandleSignalSubscriptionDeletePayload {
-  return {
-    ids: args.ids,
-  };
-}
-
-// normalizeFeedPage 把分页信息整理成更稳定的输出结构。
-function normalizeFeedPage(page: AlertDogCexCandleSignalFeedPage): ToolPayload {
-  return {
-    total: page.total,
-    base: page.base,
-    offset: page.offset,
-    index: page.index,
-    next: page.next,
-    limit: page.limit,
-    desc: page.desc,
-  };
-}
-
-// normalizeCandleSignalSubscriptionPage 把订阅列表分页信息整理成稳定结构。
-function normalizeCandleSignalSubscriptionPage(
-  page: AlertDogCexCandleSignalSubscriptionListPage | null,
-): ToolPayload | null {
-  if (!page) {
-    return null;
-  }
-
-  return {
-    total: page.total ?? null,
-    base: page.base ?? null,
-    offset: page.offset ?? null,
-    index: page.index ?? null,
-    next: page.next ?? null,
-    limit: page.limit ?? null,
-    desc: page.desc ?? null,
-  };
-}
-
-// normalizeHistoryPage 把历史记录分页信息整理成稳定结构。
-function normalizeHistoryPage(page: AlertDogCexCandleSignalHistoryPage): ToolPayload {
-  return {
-    pageFlip: page.pageFlip,
-    limit: page.limit,
-    prev: page.prev,
-    next: page.next,
-    latestCursor: page.prev,
-    olderCursor: page.next,
-    latestCursorUsage: "Use page.prev to fetch the latest available history page.",
-    olderCursorUsage: "Use page.next to fetch older history records.",
-  };
-}
-
-// toSignalPayload 把上游 feed 记录转换成更适合 Agent 消费的 camelCase 结构。
-function toSignalPayload(record: AlertDogCexCandleSignalFeedRecord): ToolPayload {
-  return {
-    id: record.id,
-    assetId: record.asset_id,
-    asset: toAssetPayload(record.asset),
-    cexCoinPriceId: record.cex_coin_price_id,
-    exchange: record.exchange,
-    baseSymbol: record.base_symbol,
-    rawSymbol: record.raw_symbol,
-    interval: record.interval,
-    candleStartAt: record.candle_start_at,
-    candleEndAt: record.candle_end_at,
-    price: record.price,
-    changePct: record.change_pct,
-    avgQuoteVolume: record.avg_quote_volume,
-    volumeMultiple: record.volume_multiple,
-    quoteVolume: record.quote_volume,
-    createdAt: record.createdAt,
-    updatedAt: record.updatedAt,
-  };
-}
-
-// toAssetPayload 把资产对象转换成精简且稳定的子结构。
-function toAssetPayload(asset: AlertDogCexCandleSignalFeedAssetRecord | null | undefined): ToolPayload | null {
-  if (!asset) {
-    return null;
-  }
-
-  return {
-    id: asset.id,
-    symbol: asset.symbol,
-    slug: asset.slug,
-    name: asset.name,
-    icon: asset.icon,
-  };
-}
-
-// toHistoryPayload 把量价异动历史记录转换成固定字段结构。
-function toHistoryPayload(record: AlertDogCexCandleSignalHistoryRecord): ToolPayload {
-  return {
-    id: record.id,
-    userId: record.user_id,
-    subscribeId: record.subscribe_id,
-    assetId: record.asset_id,
-    asset: record.asset
-      ? {
-          id: record.asset.id,
-          symbol: record.asset.symbol,
-          slug: record.asset.slug,
-          name: record.asset.name,
-          icon: record.asset.icon,
-        }
-      : null,
-    cexCoinPriceId: record.cex_coin_price_id,
-    exchange: record.exchange,
-    baseSymbol: record.base_symbol,
-    rawSymbol: record.raw_symbol,
-    interval: record.interval,
-    candleStartAt: record.candle_start_at,
-    candleEndAt: record.candle_end_at,
-    price: record.price,
-    changePct: record.change_pct,
-    avgQuoteVolume: record.avg_quote_volume,
-    volumeMultiple: record.volume_multiple,
-    quoteVolume: record.quote_volume,
-    expireAt: record.expire_at,
-    createdAt: record.createdAt,
-    updatedAt: record.updatedAt,
-    spots: (record.spots ?? []).map((spot) => toHistorySpotPayload(spot)),
-    futures: (record.futures ?? []).map((future) => toHistoryFuturePayload(future)),
-  };
-}
-
-// toHistorySpotPayload 把历史记录里的现货市场对象转换成固定字段结构。
-function toHistorySpotPayload(spot: AlertDogCexCandleSignalHistorySpotRecord): ToolPayload {
-  return {
-    id: spot.id,
-    exchange: spot.exchange,
-    symbol: spot.symbol,
-    assetId: spot.assetId,
-    delisted: spot.delisted,
-    cexCoinSpotPrice: spot.cexCoinSpotPrice ? toHistorySpotPricePayload(spot.cexCoinSpotPrice) : null,
-  };
-}
-
-// toHistorySpotPricePayload 把历史记录里的现货价格对象转换成固定字段结构。
-function toHistorySpotPricePayload(
-  price: AlertDogCexCandleSignalHistorySpotPriceRecord,
-): ToolPayload {
-  return {
-    exchange: price.exchange,
-    quote: price.quote,
-    rawSymbol: price.rawSymbol,
-    marketPrice: price.marketPrice,
-    state: price.state,
-    change1m: price.change1m,
-    change5m: price.change5m,
-    change15m: price.change15m,
-    change30m: price.change30m,
-    change1h: price.change1h,
-    change4h: price.change4h,
-    change12h: price.change12h,
-    change1d: price.change1d,
-  };
-}
-
-// toHistoryFuturePayload 把历史记录里的合约市场对象转换成固定字段结构。
-function toHistoryFuturePayload(
-  future: AlertDogCexCandleSignalHistoryFutureRecord,
-): ToolPayload {
-  return {
-    id: future.id,
-    exchange: future.exchange,
-    symbol: future.symbol,
-    rawSymbol: future.rawSymbol,
-    assetId: future.assetId,
-    cexFutureCoinPrice: future.cexFutureCoinPrice
-      ? toHistoryFuturePricePayload(future.cexFutureCoinPrice)
-      : null,
-  };
-}
-
-// toHistoryFuturePricePayload 把历史记录里的合约价格对象转换成固定字段结构。
-function toHistoryFuturePricePayload(
-  price: AlertDogCexCandleSignalHistoryFuturePriceRecord,
-): ToolPayload {
-  return {
-    exchange: price.exchange,
-    quote: price.quote,
-    realQuote: price.realQuote,
-    rawSymbol: price.rawSymbol,
-    markPrice: price.markPrice,
-    fundingRate: price.fundingRate,
-    state: price.state,
-    change1m: price.change1m,
-    change5m: price.change5m,
-    change15m: price.change15m,
-    change30m: price.change30m,
-    change1h: price.change1h,
-    change4h: price.change4h,
-    change12h: price.change12h,
-    change1d: price.change1d,
-  };
-}
-
-// requireInterval 校验量价异动订阅的 K 线周期参数。
-function requireInterval(value: unknown): string {
-  const normalized = requireString(value, "interval");
-  if (!CEX_CANDLE_SIGNAL_INTERVAL_VALUES.includes(normalized as never)) {
-    throw new Error(`interval must be one of: ${CEX_CANDLE_SIGNAL_INTERVAL_VALUES.join(", ")}`);
-  }
-  return normalized;
-}
-
-// requireDirection 校验量价异动订阅方向参数。
-function requireDirection(value: unknown): number {
-  const parsed = requirePositiveInt(value, "direction");
-  if (![1, 2, 3].includes(parsed)) {
-    throw new Error("direction must be 1, 2, or 3");
-  }
-  return parsed;
-}
-
-// requireNotifyInterval 校验通知间隔参数是否属于受支持枚举。
-function requireNotifyInterval(value: unknown): number {
-  const parsed = requirePositiveInt(value, "notify_interval");
-  if (!CEX_CANDLE_SIGNAL_NOTIFY_INTERVAL_VALUES.includes(parsed as never)) {
-    throw new Error(
-      `notify_interval must be one of: ${CEX_CANDLE_SIGNAL_NOTIFY_INTERVAL_VALUES.join(", ")}`,
-    );
-  }
-  return parsed;
 }

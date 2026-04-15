@@ -5,7 +5,7 @@ license: MIT
 metadata:
   author: alertdog
   version: "1.0.0"
-  homepage: "https://alertdog.io"
+  homepage: "https://github.com/mctxyz/alertdog-mcp"
   agent:
     requires:
       bins: ["alertdog"]
@@ -82,7 +82,7 @@ metadata:
 ### [CEX Monitor](./references/cex-monitor-skill.md)
 
 - Category id: `cex-monitor`
-- Tools: `cex_asset_search`, `cex_price_subscription_create`, `cex_price_subscription_list`, `cex_price_subscription_set_disabled`, `cex_price_subscription_delete`, `cex_offical_candle_signal_feed_list`, `cex_candle_signal_subscription_create`, `cex_candle_signal_subscription_update`, `cex_candle_signal_subscription_list`, `cex_candle_signal_subscription_notify_history_list`, `cex_candle_signal_subscription_set_disabled`, `cex_candle_signal_subscription_delete`
+- Tools: `cex_asset_search`, `cex_future_settle_time_diff_arbitrage_list`, `cex_price_subscription_create`, `cex_price_subscription_list`, `cex_price_subscription_set_disabled`, `cex_price_subscription_delete`, `cex_offical_candle_signal_feed_list`, `cex_candle_signal_subscription_create`, `cex_candle_signal_subscription_update`, `cex_candle_signal_subscription_list`, `cex_candle_signal_subscription_notify_history_list`, `cex_candle_signal_subscription_set_disabled`, `cex_candle_signal_subscription_delete`
 - Scope: Use this category when the task is about inspecting official CEX monitor feeds and signal data.
 
 ### [Notify Channel](./references/notify-channel-skill.md)

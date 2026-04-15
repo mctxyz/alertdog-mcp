@@ -231,6 +231,68 @@ export interface AlertDogCexAssetRecord {
   icon: string;
 }
 
+export interface AlertDogCexFutureSettleTimeDiffArbitrageFuturePriceRecord {
+  id: number; // 合约价格记录 id
+  exchange: string; // 交易所标识
+  quote: string; // 报价币种
+  real_quote?: string; // 交易所原始报价币种
+  rawSymbol: string; // 交易所原始交易对符号
+  fundingRate: string; // 当前资金费率
+  markPrice: string; // 当前标记价格
+  vol24H?: string; // 24 小时成交量
+  createdAt: string; // 记录创建时间
+  updatedAt: string; // 记录更新时间
+  nextFundingTime?: string | null; // 下一次资金费结算时间
+  LastFundingTime?: string | null; // 上一次资金费结算时间
+  fundingInterval?: number | null; // 资金费结算间隔，单位小时
+  state: number; // 市场状态
+  change1m?: string; // 1 分钟涨跌幅
+  change5m?: string; // 5 分钟涨跌幅
+  change15m?: string; // 15 分钟涨跌幅
+  change30m?: string; // 30 分钟涨跌幅
+  change1h?: string; // 1 小时涨跌幅
+  change4h?: string; // 4 小时涨跌幅
+  change12h?: string; // 12 小时涨跌幅
+  change1d?: string; // 1 天涨跌幅
+}
+
+export interface AlertDogCexFutureSettleTimeDiffArbitrageFutureRecord {
+  id: number; // 合约币种记录 id
+  exchange: string; // 交易所标识
+  symbol: string; // 资产符号
+  name: string; // 资产名称
+  assetId: number; // AlertDog 资产 id
+  rawSymbol: string; // 交易所原始合约符号
+  mul: number; // 合约乘数
+  createdAt: string; // 记录创建时间
+  updatedAt: string; // 记录更新时间
+  futurePrice?: AlertDogCexFutureSettleTimeDiffArbitrageFuturePriceRecord | null; // 当前关联的合约价格快照
+}
+
+export interface AlertDogCexFutureSettleTimeDiffArbitrageRecord {
+  id: number; // 套利归档记录 id
+  assetId: number; // AlertDog 资产 id
+  asset?: AlertDogCexAssetRecord | null; // 资产基础信息
+  quote: string; // 报价币种
+  maxExchange: string; // 结算时间较晚的一侧交易所
+  minExchange: string; // 结算时间较早的一侧交易所
+  minSettleFundingRate: number; // 较早结算一侧的资金费率
+  maxSettleFundingRate: number; // 较晚结算一侧的资金费率
+  minDiffSec: number; // 最小结算倒计时，单位秒
+  maxDiffSec: number; // 最大结算倒计时，单位秒
+  minFundingTime?: string | null; // 较早一侧的资金费结算时间
+  maxFundingTime?: string | null; // 较晚一侧的资金费结算时间
+  expectedProfit: number; // 预估套利收益
+  createdAt: string; // 记录创建时间
+  updatedAt: string; // 记录更新时间
+  futures?: AlertDogCexFutureSettleTimeDiffArbitrageFutureRecord[] | null; // 参与比较的合约市场列表
+}
+
+export interface AlertDogCexFutureSettleTimeDiffArbitrageListResult {
+  page: AlertDogCexPriceSubscriptionListPage | null; // 分页信息
+  records: AlertDogCexFutureSettleTimeDiffArbitrageRecord[]; // 当前页套利记录列表
+}
+
 export interface AlertDogCexPriceSubscriptionCreatePayload {
   asset_id: number;
   monitor_type: number;
@@ -681,6 +743,49 @@ export class AlertDogClient {
         auth
     );
 
+  }
+
+  // listCexFutureSettleTimeDiffArbitrage 获取合约结算时间差套利列表。
+  async listCexFutureSettleTimeDiffArbitrage(
+    auth: AlertDogRequestAuth,
+    params: {
+      index: number;
+      limit: number;
+      quote: string;
+      assetId?: number;
+    },
+  ): Promise<AlertDogCexFutureSettleTimeDiffArbitrageListResult> {
+    const searchParams = new URLSearchParams({
+      index: String(params.index),
+      page: String(params.index),
+      limit: String(params.limit),
+      quote: params.quote,
+    });
+
+    if (params.assetId !== undefined) {
+      searchParams.set("assetId", String(params.assetId));
+    }
+
+    const payload = await this.performRequestPayload<
+      AlertDogPageResponse<AlertDogCexFutureSettleTimeDiffArbitrageRecord[]> | AlertDogFailureResponse
+    >(
+      "GET",
+      `${this.buildUrl("/cex/future/settleTimeDiff-arbitrage")}?${searchParams.toString()}`,
+      auth,
+    );
+
+    if (!isSuccessPageResponse(payload)) {
+      throw new AlertDogClientError(
+        "api",
+        payload.message ?? payload.result ?? "AlertDog business request failed",
+        { apiCode: payload.code },
+      );
+    }
+
+    return {
+      page: payload.page,
+      records: payload.data,
+    };
   }
 
   // createCexPriceSubscription 创建价格监控订阅。

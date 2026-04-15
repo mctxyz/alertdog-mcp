@@ -11,6 +11,15 @@ export function renderCexMonitorToolResult(
   toolName: string,
   result: Record<string, unknown>,
 ): boolean {
+  if (toolName === "cex_future_settle_time_diff_arbitrage_list") {
+    renderSingleLineListResult(
+      result,
+      "records",
+      formatCexFutureSettleTimeDiffArbitrageLine,
+    );
+    return true;
+  }
+
   if (toolName === "cex_offical_candle_signal_feed_list") {
     renderSingleLineListResult(result, "signals", formatCexCandleSignalFeedLine);
     return true;
@@ -31,6 +40,24 @@ export function renderCexMonitorToolResult(
   }
 
   return false;
+}
+
+// formatCexFutureSettleTimeDiffArbitrageLine 把单条结算时间差套利记录压缩成单行摘要。
+function formatCexFutureSettleTimeDiffArbitrageLine(record: Record<string, unknown>): string {
+  const asset = isRecord(record.asset) ? record.asset : null;
+
+  return formatInlinePairs([
+    ["id", record.id],
+    ["symbol", asset?.symbol ?? null],
+    ["quote", record.quote],
+    ["minExchange", record.minExchange],
+    ["maxExchange", record.maxExchange],
+    ["minDiffSec", record.minDiffSec],
+    ["maxDiffSec", record.maxDiffSec],
+    ["expectedProfit", record.expectedProfit],
+    ["minFundingTime", record.minFundingTime],
+    ["maxFundingTime", record.maxFundingTime],
+  ]);
 }
 
 // renderSingleLineListResult 用统一骨架渲染列表结果，列表项压成单行。
