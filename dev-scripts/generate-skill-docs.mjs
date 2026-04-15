@@ -489,6 +489,36 @@ function renderCategorySummary(category, toolSpecs, getToolCategoryDefinition) {
   ].join("\n");
 }
 
+// buildRootSkillFrontmatter 生成根 skill 的 frontmatter，补齐 agent install metadata。
+function buildRootSkillFrontmatter(name, description) {
+  return `---
+name: ${name}
+description: "${description.replace(/"/g, '\\"')}"
+license: MIT
+metadata:
+  author: alertdog
+  version: "1.0.0"
+  homepage: "https://github.com/mctxyz/alertdog-mcp"
+  agent:
+    requires:
+      bins: ["alertdog"]
+    install:
+      - id: npm
+        kind: node
+        package: "@alertdog/cli"
+        bins: ["alertdog"]
+        label: "Install AlertDog CLI (npm)"
+---`;
+}
+
+// buildCategorySkillFrontmatter 生成分类 skill 的轻量 frontmatter，不重复写 agent metadata。
+function buildCategorySkillFrontmatter(name, description) {
+  return `---
+name: ${name}
+description: "${description.replace(/"/g, '\\"')}"
+---`;
+}
+
 // buildSkillRoutingTable 生成根技能的意图路由表，指导 agent 跳转到对应 skill。
 function buildSkillRoutingTable(groupedToolSpecs, getToolCategoryDefinition) {
   const intentByCategory = {
@@ -526,10 +556,10 @@ function buildRootSkillDoc(groupedToolSpecs, getToolCategoryDefinition) {
     )
     .join("\n");
 
-  return `---
-name: alertdog
-description: Use this skill whenever the user wants to work with AlertDog through the alertdog CLI or local MCP tools. Start here for apiKey setup, auth checks, and routing into the detailed category skills.
----
+  return `${buildRootSkillFrontmatter(
+    "alertdog",
+    "Use this skill whenever the user wants to work with AlertDog through the alertdog CLI or local MCP tools. Start here for apiKey setup, auth checks, and routing into the detailed category skills.",
+  )}
 
 # AlertDog
 
@@ -573,6 +603,13 @@ ${buildSkillRoutingTable(groupedToolSpecs, getToolCategoryDefinition)}
 - Do not read every reference file by default.
 - Open the single category skill that matches the task, then follow its command index and parameter rules.
 
+## Output Mode
+
+- Default mode is human-readable terminal output.
+- Add \`--json\` when the agent needs stable structured output for parsing, chaining, or exact field inspection.
+- Prefer default output when the user wants a quick readable answer.
+- Prefer \`--json\` when the next step depends on exact keys such as \`page.next\`, \`id\`, \`error.message\`, or nested result fields.
+
 ## Category Index
 
 ${categorySections}
@@ -605,10 +642,7 @@ function buildCategorySkillDoc(category, toolSpecs, getToolCategoryDefinition) {
   const intro = getCategoryIntro(categoryDefinition);
   const detailSections = toolSpecs.map(renderToolSection).join("\n");
 
-  return `---
-name: alertdog-${category}
-description: ${intro}
----
+  return `${buildCategorySkillFrontmatter(`alertdog-${category}`, intro)}
 
 # AlertDog ${title}
 
@@ -634,6 +668,12 @@ ${buildCategoryCommandIndex(toolSpecs)}
 2. Read the parameter table for that command.
 3. Respect required fields, default values, enum ranges, and conditional rules from \`inputSchema\`.
 4. For WRITE commands, make sure the user explicitly asked for the state-changing action before executing.
+
+## Output Mode
+
+- Default output is optimized for direct reading in the terminal.
+- Add \`--json\` when the agent needs machine-friendly output for parsing or follow-up automation.
+- Use \`--json\` for workflows that depend on exact pagination cursors, ids, booleans, or nested response objects.
 
 ${detailSections}`;
 }

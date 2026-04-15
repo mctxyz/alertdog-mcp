@@ -1,6 +1,6 @@
 ---
 name: alertdog-notify-channel
-description: Use this category when the task is about listing, creating, inspecting, testing, or deleting notification channels.
+description: "Use this category when the task is about listing, creating, inspecting, testing, or deleting notification channels."
 ---
 
 # AlertDog Notify Channel
@@ -35,6 +35,12 @@ Use this category when the task is about listing, creating, inspecting, testing,
 2. Read the parameter table for that command.
 3. Respect required fields, default values, enum ranges, and conditional rules from `inputSchema`.
 4. For WRITE commands, make sure the user explicitly asked for the state-changing action before executing.
+
+## Output Mode
+
+- Default output is optimized for direct reading in the terminal.
+- Add `--json` when the agent needs machine-friendly output for parsing or follow-up automation.
+- Use `--json` for workflows that depend on exact pagination cursors, ids, booleans, or nested response objects.
 
 ## `notify_channel_list`
 

@@ -1,6 +1,6 @@
 ---
 name: alertdog-apikey
-description: Use this category when the task is about onboarding, validating, or rotating AlertDog API keys.
+description: "Use this category when the task is about onboarding, validating, or rotating AlertDog API keys."
 ---
 
 # AlertDog API Key
@@ -33,6 +33,12 @@ Use this category when the task is about onboarding, validating, or rotating Ale
 2. Read the parameter table for that command.
 3. Respect required fields, default values, enum ranges, and conditional rules from `inputSchema`.
 4. For WRITE commands, make sure the user explicitly asked for the state-changing action before executing.
+
+## Output Mode
+
+- Default output is optimized for direct reading in the terminal.
+- Add `--json` when the agent needs machine-friendly output for parsing or follow-up automation.
+- Use `--json` for workflows that depend on exact pagination cursors, ids, booleans, or nested response objects.
 
 ## `apikey_usage_guide`
 

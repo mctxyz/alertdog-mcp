@@ -1,6 +1,20 @@
 ---
 name: alertdog
-description: Use this skill whenever the user wants to work with AlertDog through the alertdog CLI or local MCP tools. Start here for apiKey setup, auth checks, and routing into the detailed category skills.
+description: "Use this skill whenever the user wants to work with AlertDog through the alertdog CLI or local MCP tools. Start here for apiKey setup, auth checks, and routing into the detailed category skills."
+license: MIT
+metadata:
+  author: alertdog
+  version: "1.0.0"
+  homepage: "https://github.com/mctxyz/alertdog-mcp"
+  agent:
+    requires:
+      bins: ["alertdog"]
+    install:
+      - id: npm
+        kind: node
+        package: "@alertdog/cli"
+        bins: ["alertdog"]
+        label: "Install AlertDog CLI (npm)"
 ---
 
 # AlertDog
@@ -49,6 +63,13 @@ description: Use this skill whenever the user wants to work with AlertDog throug
 
 - Do not read every reference file by default.
 - Open the single category skill that matches the task, then follow its command index and parameter rules.
+
+## Output Mode
+
+- Default mode is human-readable terminal output.
+- Add `--json` when the agent needs stable structured output for parsing, chaining, or exact field inspection.
+- Prefer default output when the user wants a quick readable answer.
+- Prefer `--json` when the next step depends on exact keys such as `page.next`, `id`, `error.message`, or nested result fields.
 
 ## Category Index
 
