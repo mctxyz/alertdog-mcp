@@ -21,15 +21,19 @@ import {
 } from "./json-schema.js";
 
 interface MinimalStdioServer {
-  tool(
+  registerTool(
     name: string,
-    description: string,
+    config: {
+      description: string;
+    },
     handler: () => Promise<Record<string, unknown>>,
   ): void;
-  tool(
+  registerTool(
     name: string,
-    description: string,
-    schema: z.ZodTypeAny,
+    config: {
+      description: string;
+      inputSchema: z.ZodTypeAny;
+    },
     handler: (args: Record<string, string | number>) => Promise<Record<string, unknown>>,
   ): void;
 }
@@ -60,16 +64,22 @@ function registerProxyTool(
   const proxyInputSchema = getProxyInputSchema(toolRegistration);
 
   if (isEmptyObjectSchema(toolRegistration.inputSchema)) {
-    toolServer.tool(toolRegistration.name, toolRegistration.description, async () =>
-      directRuntime.run(toolRegistration.name),
+    toolServer.registerTool(
+      toolRegistration.name,
+      {
+        description: toolRegistration.description,
+      },
+      async () => directRuntime.run(toolRegistration.name),
     );
     return;
   }
 
-  toolServer.tool(
+  toolServer.registerTool(
     toolRegistration.name,
-    toolRegistration.description,
-    proxyInputSchema,
+    {
+      description: toolRegistration.description,
+      inputSchema: proxyInputSchema,
+    },
     async (args) =>
       directRuntime.run(toolRegistration.name, injectConfiguredApiKey(args)),
   );
