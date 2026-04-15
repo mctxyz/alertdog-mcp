@@ -1,29 +1,45 @@
 # AlertDog MCP
 
+[中文](./README.zh-cn.md)
+
 AlertDog supports two integration modes:
 
 1. **MCP installation** for MCP-compatible clients
-2. **Agent / Skill installation** for agents that support Skills
+2. **Agent installation** for agents that support Skills
 
-##  Installation
+## Installation
 
-### Option 1: Install the npm package globally
+### Agent / Skill Installation
 
-Install:
+Send the following command to your agent:
+
+```bash
+npx skills add https://github.com/mctxyz/alertdog-mcp --skill alertdog
+```
+
+### MCP Installation
 
 ```bash
 npm install -g @alertdog/mcp@latest
 ```
 
-Start:
+## Configure Credentials
+
+Create `~/.alertdog-mcp/config.json`:
+
+```json
+{
+  "apiKey": "your-api-key"
+}
+```
+
+## Run
 
 ```bash
 alertdog-mcp
 ```
 
-### Option 2: Configure it through `npx` in your MCP client
-
-Recommended configuration:
+**Claude Desktop configuration**
 
 ```json
 {
@@ -36,41 +52,15 @@ Recommended configuration:
 }
 ```
 
-When the stdio server starts, it prints a version line to `stderr`, for example:
+**Codex configuration**
 
-```text
-[AlertDog] stdio version=1.0.0
+```toml
+[mcp_servers.alertdog]
+command = "npx"
+args = ["-y", "@alertdog/mcp@latest"]
 ```
 
-## Agent / Skill Installation
-
-The skill entrypoint in this repository is:
-
-- `skills/SKILL.md`
-
-Reference documents are located in:
-
-- `skills/references/apikey-skill.md`
-- `skills/references/cex-monitor-skill.md`
-- `skills/references/notify-channel-skill.md`
-
-If your agent supports Skills installation, you can install the `alertdog` skill from this repository.
-
-Recommended command:
-
-```bash
-npx skills add mctxyz/alertdog-mcp --skill alertdog
-```
-
-If your Skills tool expects a full repository URL, use:
-
-```bash
-npx skills add https://github.com/mctxyz/alertdog-mcp --skill alertdog
-```
-
-## Auth
-
-It is recommended to install the CLI first so you can store the local API key:
+## Configure Credentials via CLI
 
 ```bash
 npm install -g @alertdog/cli
@@ -92,18 +82,4 @@ Clear the current configuration:
 
 ```bash
 alertdog auth clear
-```
-
-## Generate Skill Docs Locally
-
-If you are maintaining the skill docs inside this repository, run:
-
-```bash
-node dev-scripts/generate-skill-docs.mjs
-```
-
-Or use the root script:
-
-```bash
-yarn build:skills
 ```
