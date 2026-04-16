@@ -297,6 +297,16 @@ const CEX_CANDLE_SIGNAL_FEED_RESPONSE_FIELD_DESCRIPTIONS = [
     description: "Current funding rate for the futures contract snapshot.",
   },
   {
+    field:"futures[].cexFutureCoinPrice.exchange",
+    description:    "Exchange identifier for the futures contract snapshot. This is the exchange where the contract belongs and where orders for this rawSymbol should be placed, such as binance, bybit, or okex."
+
+  },
+  {
+    field:"futures[].cexFutureCoinPrice.rawSymbol",
+    description:     "Exchange-native futures contract symbol, such as BTCUSDT. Prefer this exact value when placing orders on the exchange"
+
+  },
+  {
     field: "futures[].cexFutureCoinPrice.change1m~change1d",
     description:
       "Futures price change percentages across rolling windows from 1 minute up to 1 day.",
@@ -1657,7 +1667,6 @@ export const CEX_CANDLE_SIGNAL_TOOL_REGISTRATIONS: AlertDogToolRegistration<Aler
                   id: 441,
                   exchange: "bybit",
                   symbol: "TUNA",
-                  rawSymbol: "",
                   assetId: 4579,
                   cexFutureCoinPrice: {
                     exchange: "bybit",

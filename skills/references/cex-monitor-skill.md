@@ -360,6 +360,8 @@ Use this tool when the user wants to inspect the latest official CEX candle sign
 - `spots[].cexCoinSpotPrice.change1m~change1d`: Spot price change percentages across rolling windows from 1 minute up to 1 day.
 - `futures[].cexFutureCoinPrice.markPrice`: Latest futures mark price for that exchange and contract pair.
 - `futures[].cexFutureCoinPrice.fundingRate`: Current funding rate for the futures contract snapshot.
+- `futures[].cexFutureCoinPrice.exchange`: Exchange identifier for the futures contract snapshot. This is the exchange where the contract belongs and where orders for this rawSymbol should be placed, such as binance, bybit, or okex.
+- `futures[].cexFutureCoinPrice.rawSymbol`: Exchange-native futures contract symbol, such as BTCUSDT. Prefer this exact value when placing orders on the exchange
 - `futures[].cexFutureCoinPrice.change1m~change1d`: Futures price change percentages across rolling windows from 1 minute up to 1 day.
 
 ### Example 1: Read the first page of official candle signal feed items
@@ -548,6 +550,8 @@ Use this tool when the user wants to inspect notification trigger history genera
 - `spots[].cexCoinSpotPrice.change1m~change1d`: Spot price change percentages across rolling windows from 1 minute up to 1 day.
 - `futures[].cexFutureCoinPrice.markPrice`: Latest futures mark price for that exchange and contract pair.
 - `futures[].cexFutureCoinPrice.fundingRate`: Current funding rate for the futures contract snapshot.
+- `futures[].cexFutureCoinPrice.exchange`: Exchange identifier for the futures contract snapshot. This is the exchange where the contract belongs and where orders for this rawSymbol should be placed, such as binance, bybit, or okex.
+- `futures[].cexFutureCoinPrice.rawSymbol`: Exchange-native futures contract symbol, such as BTCUSDT. Prefer this exact value when placing orders on the exchange
 - `futures[].cexFutureCoinPrice.change1m~change1d`: Futures price change percentages across rolling windows from 1 minute up to 1 day.
 - `subscribe_id`: User subscription id that generated this trigger history record.
 - `user_id`: User id that owns the candle signal subscription and its trigger history.
@@ -634,7 +638,6 @@ Use this tool when the user wants to inspect notification trigger history genera
           "id": 441,
           "exchange": "bybit",
           "symbol": "TUNA",
-          "rawSymbol": "",
           "assetId": 4579,
           "cexFutureCoinPrice": {
             "exchange": "bybit",
